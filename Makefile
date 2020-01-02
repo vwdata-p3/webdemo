@@ -24,7 +24,7 @@ ristretto_is_build: ristretto.c ristretto.h
 
 # Targets to create profile graphs for the benchmarks in benchmarks.py
 benchmark_%.profile: pep3
-	pep3 --dump-stats $@ benchmark --run-servers $* 
+	python3 pep3.py --dump-stats $@ benchmark --run-servers $* 
 
 benchmark_%.dot: benchmark_%.profile
 	gprof2dot -f pstats $< -o $@
