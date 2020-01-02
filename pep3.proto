@@ -1,0 +1,444 @@
+syntax = "proto3";
+
+package pep3;
+
+import "google/protobuf/struct.proto";
+
+message FlowRecord {
+	message AnonymousPart {
+		uint64 start_time = 1;
+		uint64 end_time = 2;
+		uint32 source_port = 3;
+		uint32 destination_port = 4;
+		uint32 number_of_packets = 5;
+		uint32 number_of_bytes = 6;
+		uint32 protocol = 7;
+	}
+	AnonymousPart anonymous_part = 1;
+
+	Pseudonymizable source_ip = 2;
+	Pseudonymizable destination_ip = 3;
+}
+
+message Pseudonymizable {
+	enum State {
+		option allow_alias = true;
+
+		ZERO = 0;
+		VALID = 1;
+		PSEUDONYMIZED = 2;
+		ENCRYPTED = 4;
+		
+		UNENCRYPTED_NAME = 1;
+		UNENCRYPTED_PSEUDONYM = 3;
+		ENCRYPTED_NAME = 5;
+		ENCRYPTED_PSEUDONYM = 7;
+
+	}
+	State state = 2;
+
+	// state                      data
+	//
+	// ENCRYPTED_NAME             96 bytes encoding an ElGamal triple
+	// ENCRYPTED_PSEUDONYM        96 bytes encoding an ElGamal triple
+        // UNENCRYPTED_PSEUDONYM      32 bytes encoding a point on the curve
+        // UNENCRYPTED_NAME           16 bytes
+	bytes data = 1;
+}
+
+message Rows {
+	repeated Row rows = 1;
+}
+
+message Row {
+	repeated Value cells = 1;
+}
+
+message Value {
+	// (inspired by struct.proto's Value)
+	oneof kind {
+		Pseudonymizable pseudonymizable_value = 1;
+		double number_value = 2;
+		string string_value = 3;
+	}
+}
+
+message Void { }
+
+// backend for the storage facility
+service Database {
+	// flowrecords should be unencrypted and localized for the SF
+	rpc Store (stream StoreRequest) returns (stream StoreFeedback);
+
+	// the ips taken and returned by this function
+	// should be unencrypted and localized for the SF
+	rpc Query (SqlQuery) returns (stream Rows);
+}
+
+message StoreRequest {
+	repeated FlowRecord records = 1;
+        bytes id = 2; 
+}
+
+message StoreFeedback {
+        bytes stored_id = 1; 
+}
+
+
+message SqlQuery {
+	string query = 1;
+	map<string,Value> parameters = 2;
+}
+
+
+message Message {
+        enum Code {
+            INVALID = 0;
+
+            ERROR = 1;
+            WARNING = 2;
+            OK = 3;
+        }
+
+        Code code = 1;
+        string text = 2;
+}
+
+message Mode {
+    enum Enum {
+        ON = 0;
+        FAULTY = 1;
+        OFF = 2;
+    }
+    Enum mode = 1;
+}
+
+service StorageFacility {
+	// flowrecords in the StoreRequests should be encrypted 
+        // and localized for the SF.
+	rpc Store (stream StoreRequest) returns (stream StoreFeedback);
+
+	// Query should be encrypted and localized for the SF.
+	// The (ips in the) returned rows are polymorphically encrypted
+	// and localized for the storage facility.
+	rpc Query (SqlQuery) returns (stream Rows);
+}
+
+// the party collecting the traffic flows
+service Collector {
+	// The flow records in StoreRequest should be plaintext.
+	rpc Store (stream StoreRequest) returns (stream StoreFeedback);
+}
+
+service Researcher {
+	// The ips taken and returned by this function should
+	// be unencrypted and localized for the researcher.
+	rpc Query (SqlQuery) returns (stream Rows);
+	rpc Depseudonymize (DepseudonymizationRequest.Warrant)
+		returns (Pseudonymizable);
+}
+
+// TODO: make Researcher and Investigator instances of the same type
+service Investigator {
+	rpc Query (SqlQuery) returns (stream Rows);
+	rpc Depseudonymize (DepseudonymizationRequest.Warrant)
+		returns (Pseudonymizable);
+}
+
+// server type used by the webdemo to get access to
+// the special Demo_* functions on Peer
+service Demonstrator {
+}
+
+service Peer {
+	rpc Enroll(Void) returns (EnrollmentResponse);
+
+	// Have a peer check the components of the shards it doesn't own;
+	// and have it return a reminder-to-itself that these components
+	// were correct.
+	rpc RegisterComponents (CertifiedComponents)
+		returns (ComponentsRegistrationResponse);
+
+	rpc Relocalize(RelocalizationRequest) returns (RelocalizationResponse);
+	rpc Depseudonymize(DepseudonymizationRequest) 
+		returns (DepseudonymizationResponse);
+
+        // for demonstration purposes:
+        rpc Demo_Monitor(Void) returns (stream Message);
+        rpc Demo_SetMode(Mode) returns (Void); 
+}
+message EnrollmentResponse {
+	message ByShard {
+		map<string,bytes> private_local_keys = 1; // by domain
+	}
+	map<string,ByShard> by_shard = 1;
+
+	map<string,CertifiedComponentsByShard> components = 3;
+}
+
+message CertifiedComponentsByShard {
+	CertifiedComponent pseudonym = 1;
+	map<string,CertifiedComponent> keys = 2; // by domain
+}
+
+message CertifiedComponent {
+	bytes component = 1;
+	ProductProof product_proof = 2;
+}
+
+message ProductProof {
+	repeated bytes dht_proofs = 1;
+	repeated bytes partial_products = 2;
+}
+
+message CertifiedComponents {
+	map<string,CertifiedComponentsByShard> components = 1;
+}
+
+message ComponentIsCorrectReminder {
+	bytes component = 1;
+	string shard = 2;
+
+	message Pseudonym { }
+	message Key {
+		string domain = 1;
+	}
+
+	oneof type {
+		Pseudonym pseudonym = 3;
+		Key key = 4;
+	}
+
+	bytes signature = 5;
+}
+
+message ComponentsRegistrationResponse {
+	repeated ComponentIsCorrectReminder reminders = 1;	
+}
+
+message RelocalizationRequest {
+	message Warrant {
+		// TODO: remove "Act"?
+		message Act {
+			bytes target = 2;
+			bytes source = 3;
+			bytes encrypt_for = 4;
+			bytes actor = 5; 
+		}
+		Act act = 1;
+
+		bytes signature = 2;
+	}
+	Warrant warrant = 1;
+
+	repeated Pseudonymizable names = 2;
+	repeated string which_shards = 3;
+}
+
+message RelocalizationResponse {
+	repeated Pseudonymizable names = 1;
+}
+
+message DepseudonymizationRequest {
+	message Warrant {
+		message Act {
+			// TODO: perhaps not polymorphically encrypted,
+			// but for the actor; actor might then be removed?
+			Pseudonymizable name = 1;
+			bytes actor = 2;
+		}
+		Act act = 1;
+
+		bytes signature = 2;
+	}
+	Warrant warrant = 1;
+
+	repeated string which_shards = 2;
+
+	message Link {
+		repeated string which_shards = 1;
+		string peer = 3; // TODO: check if needed
+		DepseudonymizationResponse peer_response = 2;
+	}
+	repeated Link chain = 4;
+
+	// maps a component to the reminder it's correct
+	repeated ComponentIsCorrectReminder reminders = 5; 
+}
+
+message DepseudonymizationResponse {
+	bytes rs_proof = 1; 
+	Pseudonymizable name = 2;
+
+	bytes s_inv_B = 6;
+	repeated bytes s_inv_B_factors = 7; 
+	ProductProof s_inv_B_proof = 8;
+
+	bytes sB = 9;
+	bytes sB_proof = 10;  // proof that (sB, s_inv_B, B) is a DHT
+}
+
+
+// The configuration of the PEP system known to all parties.
+message Configuration {
+	message Certificates {
+		// the client and server tls certificates are checked to be
+		// derived from this certificate.
+		string tls = 1;
+
+		// warrants for relocalization should be signed by certificates
+		// derived from this certificate.
+		string warrants = 2;
+	}
+	Certificates root_certificates = 1;
+
+	// domains used for pep keys such as "data", "pseudonym", etc.
+	repeated string domains = 2;
+
+	// names of the shards spread among the peers
+	repeated string shards = 3;
+	
+	message ServerLocation {
+		string common_name = 1;
+		string address = 2;
+		string listen_address = 3;
+		string tls_certificate = 4;
+	}
+
+	message Peer {
+		ServerLocation location = 1;
+		uint32 number_of_threads = 2;
+
+		// names of the shards known to this peer
+		repeated string shards = 3;
+	}
+	map<string,Peer> peers = 4;
+
+	message Researcher {
+		ServerLocation location = 1;
+		uint32 number_of_threads = 2;
+
+		message Warrants {
+			RelocalizationRequest.Warrant from_me_to_sf = 1;
+			RelocalizationRequest.Warrant from_sf_to_me = 2;
+		}
+		Warrants warrants = 3;
+	}
+	Researcher researcher = 5;
+
+	message StorageFacility {
+		ServerLocation location = 1;
+		uint32 number_of_threads = 2;
+	}
+	StorageFacility storage_facility = 6;
+
+	message Investigator {
+		ServerLocation location = 1;
+		uint32 number_of_threads = 2;
+
+		message Warrants {
+			RelocalizationRequest.Warrant from_me_to_sf = 1;
+			RelocalizationRequest.Warrant from_sf_to_me = 2;
+		}
+		Warrants warrants = 3;
+	}
+	Investigator investigator = 9;
+
+	message Collector {
+		ServerLocation location = 1;
+		uint32 number_of_threads = 2;
+
+		message Warrants {
+			RelocalizationRequest.Warrant to_sf = 1;
+		}
+		Warrants warrants = 3;
+	}
+	Collector collector = 7;
+
+	message Database {
+		ServerLocation location = 1;
+		uint32 number_of_threads = 2;
+
+		message Engine {
+			// the following three arguments are passed 
+			// to sqlalchemy.create_engine
+			string uri = 1;
+
+			// passes sqlalchemy.pool.<poolclass>, so might
+			// be "StaticPool".
+			string poolclass = 2; 
+
+			google.protobuf.Struct connect_args = 3;
+			
+			// invoke Base.metadata.create_all?
+			bool create_tables = 4;
+		}
+		Engine engine = 3;
+	}
+	Database database = 8;
+
+        message Demonstrator {
+            ServerLocation location = 1;
+            uint32 number_of_threads = 2;
+        }
+        Demonstrator demonstrator = 12;
+
+	message ComponentPublicPart {
+		repeated bytes base_times_two_to_the_power_of = 1;
+	}
+
+	message ComponentsByShard {
+		ComponentPublicPart pseudonym = 1;
+		map<string,ComponentPublicPart> keys = 2; // by domain
+	}
+	map<string,ComponentsByShard> components = 10;
+
+	message TableDescriptor {
+		map<string,string> columns = 1; 
+	}
+	// db_desc[table_name].columns[column_name] is either 'plain'
+	// or 'pseudonymized'.
+	map<string,TableDescriptor> db_desc = 11;
+
+        uint32 batchsize = 13;
+}
+
+// Secrets needed to run parts of the PEP system.
+message Secrets {
+	message Peer {
+		string tls_certificate_key = 1;
+		
+		message ByShard {
+			message ByDomain {
+				bytes private_master_key = 1;
+				bytes key_component_secret = 2;
+			}
+			map<string,ByDomain> by_domain = 1;
+
+			bytes pseudonym_component_secret = 2;
+		}
+		map<string,ByShard> by_shard = 2;
+
+		bytes reminders_hmac_secret = 4;
+	}
+
+	map<string,Peer> peers = 1;
+
+	message SimpleServer {
+		string tls_certificate_key = 1;
+	}
+	SimpleServer database = 2;
+	SimpleServer researcher = 3;
+	SimpleServer storage_facility = 4;
+	SimpleServer collector = 5;
+	SimpleServer investigator = 6;
+        SimpleServer demonstrator = 8;
+
+	message RootCertificateKeys {
+		bytes tls = 1;
+		bytes warrants = 2;
+	}
+	RootCertificateKeys root_certificate_keys = 7;
+}
+
+// vim: set cindent:

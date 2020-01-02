@@ -1,0 +1,60 @@
+
+
+[class^="value-"] {
+}
+
+.value-pseudonymizable {
+    font-family: monospace;
+    width: 100px;
+    text-overflow: ellipsis;
+    overflow: hidden;
+}
+
+.peer {
+    border-radius: 30px;
+    border: 3px solid;
+    border-color: gray;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: .2em;
+}
+
+.peer[data-state="0"] { 
+    /* ON */
+    border-color: #AAFFAA;
+}
+.peer[data-state="1"] { 
+    /* FAULTY */
+    border-color: #FFAAAA;
+}
+.peer[data-state="2"] { 
+    /* OFF */
+    border-color: #AAAAAA;
+}
+
+.peer[data-state="-1"] { 
+    /* CHANGING */
+    border-color: #AAAAFF;
+}
+
+#peers > div {
+    display: flex;
+    flex-direction: row;
+
+}
+
+[data-is-valid="true"] {
+    background-color: #EEFFEE;
+}
+
+[data-is-valid="false"] {
+    background-color: #FFEEEE;
+}
+
+[data-is-valid="unknown"] {
+    background-color: #EEEEFF;
+}
+

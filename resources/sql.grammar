@@ -1,0 +1,49 @@
+# Parsimonious grammar for a subset of SQL
+
+statement = _ select_statement ";"? _
+
+select_statement = select_clause from_clause? where_clause? 
+	group_by_clause? order_by_clause? limit_clause?
+
+select_clause = ~"SELECT"i _eow _ exprs
+from_clause = ~"FROM"i _eow _ name ( "," _ name )*
+where_clause = ~"WHERE"i _eow _ bool_expr
+group_by_clause = ~"GROUP"i _eow _ ~"BY"i _eow _ exprs
+order_by_clause = ~"ORDER"i _eow _ ~"BY"i _eow _ sort_specs
+limit_clause = ~"LIMIT"i _eow _ number
+
+sort_specs = sort_spec sort_specs_tail
+sort_specs_tail = ( "," _ sort_spec )*
+sort_spec = expr (~"ASC|DESC"i _eow _)?
+
+bool_expr = and_or_expr / not_expr / paren_bool_expr / comp_expr
+and_or_expr = below_and_or  (~"AND|OR"i _eow _ below_and_or )+
+below_and_or = not_expr / paren_bool_expr / comp_expr
+not_expr = ~"NOT"i _eow _ ( paren_bool_expr / comp_expr )
+paren_bool_expr = "(" _ bool_expr ")" _
+comp_expr = expr ~"<=|<>|<|>=|>|=" _ expr
+
+exprs = expr exprs_tail
+exprs_tail = ( "," _ expr )*
+
+expr = add_expr / mult_expr / neg_expr / simple_expr
+add_expr = below_add add_tail
+add_tail = ( ("+"/"-") _ below_add )+
+below_add = mult_expr / neg_expr / simple_expr
+mult_expr = below_mult mult_tail
+mult_tail = (  ("*"/"/") _ below_mult )+
+below_mult = neg_expr / simple_expr
+neg_expr = "-" _ simple_expr
+simple_expr = column_ref / literal / paren_expr / parameter / sum / count
+column_ref =  name "." _ name
+name = ~"[a-zA-Z_][a-zA-Z_0-9]*" _
+paren_expr = "(" _ expr ")" _
+literal = number / string
+number = ~"[0-9]+" _
+string = ~"\"[^\"]*(\"\"[^\"]*)*\"" _
+parameter = ":" name _
+sum = ~"SUM"i _eow _ paren_expr
+count = ~"COUNT"i _eow _ paren_expr
+
+_eow = !(~"[a-zA-Z0-9_]") # end of word
+_ = ~"((--[^\r\n]*)|([ \r\n\t]*))*" # whitespaces and comments

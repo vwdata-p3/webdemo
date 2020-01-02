@@ -1,0 +1,682 @@
+{% extends "core.html" %}
+
+{% block title %}PEP3 Demo{% endblock %}
+
+{% block head %}
+<style>{% include "index.css" %}</style>
+
+<script>
+function add_parameter(name,value,pseudonym) {
+	var ul = document.getElementById('parameters');
+
+	var index = ul.childNodes.length-2;
+
+	var li = document.createElement("li");
+
+	li.appendChild(document.createTextNode(":"));
+
+	var parameterName = document.createElement('input');
+	parameterName.setAttribute('id', 'parameter-name-' + index);
+	li.appendChild(parameterName);
+
+	if (name!=null) {
+		parameterName.setAttribute('value',name);
+	}
+
+	li.appendChild(document.createTextNode(" = "));
+
+	var parameterValue = document.createElement('input');
+	parameterValue.setAttribute('id', 'parameter-value-' + index);
+	li.appendChild(parameterValue);
+
+	if (value!=null) {
+		parameterValue.setAttribute('value',value);
+	}
+
+	var parameterIsPseudonym = document.createElement('input');
+	parameterIsPseudonym.setAttribute('id', 'parameter-is-pseudonym-' + index);
+	parameterIsPseudonym.setAttribute('type', 'checkbox');
+
+	if (pseudonym==null) {
+		pseudonym = true;
+	}
+
+	parameterIsPseudonym.checked = pseudonym;
+	li.appendChild(document.createTextNode(', '));
+	li.appendChild(parameterIsPseudonym);
+	li.appendChild(document.createTextNode(' is pseudonym'));
+        
+        var on_change = function() { 
+            check_parameter($(parameterValue), $(parameterIsPseudonym));
+        }
+        $(parameterValue).change(on_change);
+        $(parameterIsPseudonym).change(on_change);
+
+	ul.insertBefore(li, document.getElementById('addbuttonli'));
+}
+
+function random_ip() {
+	var arr = new Array(8);
+	for (var i=0; i<8; i++)
+		arr[i] = random_int_below(65536).toString(16);
+	return arr.join(':');
+}
+
+function random_int_below(N) {
+	var result;
+	do { result = Math.floor( Math.random()*(N+1) ); } 
+	while (result==N+1);
+	return result;
+}
+
+function set_value(id, value) {
+	node = $("#"+id);
+        node.val(value);
+        node.trigger("change");
+}
+
+function randomize_all() {
+	var inputs = document.getElementsByTagName('input');
+
+	for (var i=0; i<inputs.length; i++) {
+		input = inputs[i];
+		if (input.type!='button')
+			continue;
+		if (input.value!='random')
+			continue;
+		input.click();
+	}
+}
+
+hexdigits = "0123456789abcdef";
+
+function format_ipv6address(data) {
+    if (data.length != 16)
+        throw "format_ipv6address: data not 16 bytes";
+
+    result = "";
+
+    for (var i=0; i<8; i++) {
+        if (i>0)
+            result += ":";
+
+        var value = data.charCodeAt(2*i);
+        var d1 = Math.floor( value / 16 );
+        var d2 = value % 16;
+        var value = data.charCodeAt(2*i+1);
+        var d3 = Math.floor( value / 16 );
+        var d4 = value % 16;
+
+        result += hexdigits.charAt(d1);
+        result += hexdigits.charAt(d2);
+        result += hexdigits.charAt(d3);
+        result += hexdigits.charAt(d4);
+    }
+
+    return result;
+}
+
+function parse_ipv6address(text) {
+	// check for invalid characters
+	for(var i=0; i<text.length; i++) {
+		var code = text.charCodeAt(i);
+		// 0-9: 48-58
+		// A-F  65-70
+		// a-f  97-102
+		if (code < 48 || (code > 58 && code < 65)
+				|| (code > 70 && code < 97) || code > 102)
+			throw "invalid character: " + text.charAt(i);
+	}
+
+	var bits = text.split(":");
+	// Since '::' is an abbreviation of ':0:...:0:' one expects bits to
+	// have at most 8 elements, and if it has fewer than eight elements,
+	// that exactly one of them equals "".
+	// 
+	// Unfortunately, when '::' appears at the start (or end) it is
+	// an abbreviation of '0:...:0:' (or ':0:...:0') instead, so that
+	// there might be nine bits, and "" might appear twice, 
+	// or even thrice (if the address is '::').
+	//
+	// We'll deal with this cornercase by replacing those double ""s first.
+	if (bits.length < 3)
+		throw "too few ':'s";
+	if (bits[0] == "") {
+		if (bits[1] != "")
+			throw "can't start with single ':'";
+		bits.splice(0,1);
+	}
+	if ( bits[bits.length-1]=="") {
+		if (bits[bits.length-2] != "")
+			throw "can't end with single ':'";
+		bits.splice(bits.length-1,1);
+	}
+
+	if (bits.length > 8)
+		throw "too many ':'s";
+	if (bits.length < 8) {
+		// check if we have exactly one "::", 
+		// and replace it by zeros
+		var idx = bits.indexOf("");
+		if (idx == -1)
+			throw "too few ':'s, or missing '::'";
+		if (idx<bits.lastIndexOf("")) {	
+			throw "double '::'";
+		}
+		bits[idx]="0";
+		while (bits.length < 8)
+			bits.splice(idx, 0, "0");
+	}
+	for (var i=0; i<8; i++) {
+		var bit = bits[i];
+		if (bit.length > 4)
+			throw "piece too long";
+		bits[i] = parseInt(bits[i], 16);
+	}
+        var bytes = "";
+        for (var i=0; i<8; i++) {
+            bytes += String.fromCharCode(Math.floor(bits[i] / 256));
+            bytes += String.fromCharCode(bits[i] % 256);
+        }
+        return bytes;
+}
+
+function collector_submit() {
+
+    try {
+        var flowrecord = {
+            "source_ip": {
+                "data": base64encode(parse_ipv6address($('#src_ip').val())),
+                "state": 1 // unencrypted name
+            },
+            "destination_ip": {
+                "data": base64encode(parse_ipv6address($('#dst_ip').val())),
+                "state": 1 
+            },
+            "anonymous_part": {
+                "source_port": parse_natural_number($('#src_port').val()),
+                "destination_port": 
+                        parse_natural_number($('#dst_port').val()),
+                "start_time": parse_natural_number($('#start_time').val()),
+                "end_time": parse_natural_number($('#end_time').val()),
+                "number_of_packets": parse_natural_number($('#packets').val()),
+                "number_of_bytes": parse_natural_number($('#bytes').val()),
+                "protocol": parse_natural_number($('#protocol').val())
+            }
+        };
+    } catch (err) {
+        operation_feedback($("#collector"), false);
+
+        return;
+    }
+
+    $('#collector_submit').prop('disabled',true);
+
+    var flowrecords = {
+        "records": [flowrecord],
+        "id": base64encode(
+            String.fromCharCode(Math.floor(Math.random()*256)) +
+            String.fromCharCode(Math.floor(Math.random()*256)) +
+            String.fromCharCode(Math.floor(Math.random()*256)) +
+            String.fromCharCode(Math.floor(Math.random()*256)) +
+            String.fromCharCode(Math.floor(Math.random()*256)) +
+            String.fromCharCode(Math.floor(Math.random()*256)) +
+            String.fromCharCode(Math.floor(Math.random()*256)) +
+            String.fromCharCode(Math.floor(Math.random()*256)) +
+            String.fromCharCode(Math.floor(Math.random()*256)) +
+            String.fromCharCode(Math.floor(Math.random()*256)) +
+            String.fromCharCode(Math.floor(Math.random()*256)) +
+            String.fromCharCode(Math.floor(Math.random()*256)) +
+            String.fromCharCode(Math.floor(Math.random()*256)) +
+            String.fromCharCode(Math.floor(Math.random()*256)) +
+            String.fromCharCode(Math.floor(Math.random()*256)) +
+            String.fromCharCode(Math.floor(Math.random()*256)) 
+        )
+    };
+
+    socket.emit('rpc', 'collector', undefined, 
+        'Store', [flowrecords], undefined, (answer)=> {
+        $('#collector_submit').prop('disabled',false);
+
+        if("error" in answer) {
+            console.error(answer.error);
+            console.error(answer.traceback);
+            
+            operation_feedback($("#collector"), false);
+
+            return;
+        }
+        operation_feedback($("#collector"), true);
+    });
+}
+
+function check_ip(inputNode) {
+    var correct = true;
+
+    try {
+        parse_ipv6address(inputNode.val());
+    } catch (err) {
+        correct = false;
+    }
+
+    color_input(inputNode, correct);
+}
+
+function check_natural_number(inputNode) {
+    var correct = true;
+
+    try {
+        parse_natural_number(inputNode.val());
+    } catch {
+        correct = false;
+    }
+
+    color_input(inputNode, correct);
+}
+
+function check_parameter(valueNode, isPseudonymNode) {
+    var correct = true;
+
+    if (isPseudonymNode.is(":checked")) {
+        correct = base64check(valueNode.val());
+    }
+
+    color_input(valueNode, correct);
+}
+
+function parse_natural_number(repr) {
+    var nmb = Number(repr);
+    if (repr==="" || !Number.isInteger(nmb) || nmb<0)
+        throw "not a natural number"; 
+    return nmb;
+}
+
+function color_input(inputNode, correct) {
+    var colorcode = '#FFEEEE';
+    if (correct==true) 
+        colorcode = '#EEFFEE';
+    if (correct==undefined)
+        colorcode = '#EEEEFF';
+    inputNode.css('background-color', colorcode);
+}
+
+function researcher_get_query() {
+    var query = {};
+    query["query"] = $("#query").val();
+    query["parameters"] = {};
+    
+    for (var i=1;;i++) {
+        var name_input = $("#parameter-name-"+i);
+        if (name_input.length==0)
+            break;
+        var parameter_name = name_input.val();
+        var parameter = {};
+        var val = $("#parameter-value-"+i).val();
+
+        if ($("#parameter-is-pseudonym-"+i).is(":checked")) {
+            parameter["pseudonymizable_value"] = {
+                "data": val,
+                "state": 3 // unencrypted pseudonym
+            };
+        } else {
+            var nmb = Number(val);
+
+            if (!isNaN(nmb)) {
+                parameter["number_value"] = nmb;
+            } else {
+                parameter["string_value"] = val;
+            }
+        }
+        
+        query["parameters"][parameter_name] = parameter;
+    }
+    return query;
+}
+
+function researcher_submit() {
+    var query = researcher_get_query();
+
+    $('#researcher_submit').prop('disabled', true);
+    $('#researcher_results').animate({"max-height": "0px"}, 100);
+
+    var agent = $('#researcher-select').val();
+
+    socket.emit('rpc', agent, undefined, 'Query', [query], undefined, 
+            (answer)=> {
+        $('#researcher_submit').prop('disabled',false);
+
+        if("error" in answer) {
+            console.error(answer.error);
+            operation_feedback($("#researcher"), false);
+            return;
+        }
+        operation_feedback($("#researcher"), true);
+        
+        researcher_display_rowss(answer.results);
+    });
+}
+
+function researcher_display_rowss(rowss) {
+    resultsDiv = $("#researcher_results");
+    resultsDiv.empty();
+
+    var table = $("<table></table>");
+    var had = 0;
+
+    for (var i=0; i<rowss.length; i++) {
+        for (var j=0; j<rowss[i].rows.length; j++) {
+            var row = rowss[i].rows[j];
+            var tr = $("<tr></tr>");
+            
+            for (var k=0; k<row.cells.length; k++) {
+                had++;
+                var val = row.cells[k];
+                var strVal = undefined;
+                var valType = undefined;
+
+                if ("numberValue" in val) {
+                    strVal = val.numberValue.toString();
+                    valType = "number";
+                } else if ("stringValue" in val) {
+                    strVal = val.stringValue;
+                    valType = "string";
+                } else if ("pseudonymizableValue" in val) {
+                    strVal = val.pseudonymizableValue.data;
+                    valType = "pseudonymizable";
+                }
+                tr.append( $("<td><div class='value-" + valType + "'>" + strVal + "</div></td>") );
+            }
+
+            table.append(tr);
+        }
+    }
+    
+    if(had==0) {
+        table.append( $("<tr><td><em>(no results)</em></td></tr>") );
+    }
+
+    resultsDiv.append(table);
+    resultsDiv.animate({"max-height": "200px"});
+}
+
+function operation_feedback(node, success) {
+    var color = "#FFAAAA";
+    if (success) 
+        color = "#AAFFAA";
+    node.animate({backgroundColor: color},20);
+    if(!success)
+        node.effect("shake");
+    node.animate({backgroundColor:"white"},500);
+}
+
+function check_query(node) {
+    var query = researcher_get_query();
+    color_input(node, undefined);
+
+    socket.emit('check_query', query, (answer) => {
+        var correct = true;
+
+        if("error" in answer) {
+            console.error(answer.error);
+            return;
+        }
+
+        if("invalid_query" in answer) {
+            correct = false;
+            console.error(answer.invalid_query);
+        } else {
+            console.log(answer.columns);
+        }
+
+        color_input(node, correct);
+    });
+
+}
+
+socket.on('peer_message', function(data){
+    var peerNode = $("#peer-"+data['peer_name']);
+    peerNode.animate({backgroundColor: '#AAFFAA'},20);
+    peerNode.animate({backgroundColor: 'white'},200);
+});
+
+</script>
+{% endblock %}
+
+{% block body %}
+<fieldset id="peers" style="display: block">
+<legend>Peers</legend>
+<div>
+{% for peer_name in config.peers | sort %}
+<div id="peer-{{ peer_name }}" class="peer"><p>{{ peer_name }}</p></div>
+<script>$(function(){
+    var node = $("#peer-{{ peer_name}}");
+    
+    node.attr('data-state', 0);  // 0: ON, 1: FAULTY, 2: OFF, -1: CHANGING
+
+    node.on('click', function(){
+        var state = (node.attr('data-state') + 1) % 3;
+        if(state==1) state=2; // skip the fault state for now TODO: remove
+
+        node.attr('data-state', -1);
+        
+        socket.emit('rpc', 'peer', '{{ peer_name }}',
+            'Demo_SetMode', [{'mode': state}], 'demonstrator', 
+            (answer)=> {
+                if('error' in answer) {
+                    console.error(answer.error);
+                }
+                node.attr('data-state', state);
+            });
+    });
+});</script>
+{% endfor %}
+</div>
+</fieldset>
+
+<fieldset id="collector" style="display:block; width: 50%; box-sizing:border-box; margin:0; float:left"><legend>Collector&mdash;Store flowrecords</legend>
+<dl>
+    <dt>Source</dt>
+    <dd>[ <input id="src_ip" onchange="check_ip($(this))" size="35" /> ] :
+    <input id="src_port" type="number" 
+        onchange="check_natural_number($(this))" />
+    <input type="button" value="random" onclick="set_value('src_ip', random_ip()); set_value('src_port', random_int_below(9999));"
+    /></dd>
+
+    <dt>Destination</dt>
+    <dd>[ <input id="dst_ip" onchange="check_ip($(this))" size="35" /> ] : 
+    <input id="dst_port" type="number" onchange="check_natural_number($(this))" />
+    <input type="button" value="random" 
+    onclick="set_value('dst_ip', random_ip()); set_value('dst_port', random_int_below(9999));"
+    /></dd>
+
+    <dt>Duration</dt>
+    <dd>
+    <input id="start_time" type="number" onchange="check_natural_number($(this))" />
+    to
+    <input id="end_time" type="number"  onchange="check_natural_number($(this))" />
+    <input type="button" value="random" 
+                  onclick="var start_time = random_int_below(20000000); set_value('start_time', start_time); set_value('end_time', start_time+random_int_below(1000));" /></dd>
+
+    <dt>Protocol</dt>
+    <dd><input id="protocol" type="number" onchange="check_natural_number($(this))"  />
+    <input type="button" value="random" 
+    onclick="set_value('protocol', random_int_below(1));"
+    /></dd>
+
+    <dt>Packets</dt>
+    <dd><input id="packets" type="number"  onchange="check_natural_number($(this))" />
+    <input type="button" value="random" 
+    onclick="set_value('packets', random_int_below(1000));"
+    /></dd>
+
+    <dt>Bytes</dt>
+    <dd><input id="bytes" type="number" onchange="check_natural_number($(this))"  />
+    <input type="button" value="random" 
+    onclick="set_value('bytes', random_int_below(1000000));"
+    /></dd>
+</dl>
+<input type="button" value="Randomize all" onclick="randomize_all()" />
+<input id="collector_submit" type="button" value="Submit flowrecord" 
+onclick="collector_submit()" />
+</fieldset>
+
+<fieldset id="researcher" style="width:50%; box-sizing:border-box; float:left; margin:0; display:inline-block">
+<legend><select id="researcher-select">
+    <option value="researcher">Researcher</option>
+    <option value="investigator">Investigator</option>
+</select>&mdash;Retrieve flowrecords</legend>
+<textarea title="" rows="10" style="width:100%" id="query" onchange="check_query($(this))">
+SELECT peped_flows.p_src_ip, peped_flows.src_port, 
+peped_flows.p_dst_ip, peped_flows.dst_port,
+peped_flows.packets FROM peped_flows
+LIMIT 10
+</textarea>
+
+<ul id='parameters' style="list-style-type:none">
+	<li id='addbuttonli'><input type="button" value="Add parameter" onclick="add_parameter(null, null, null)"/></li>
+</ul>
+
+<input id="researcher_submit" type="submit" value="Submit query" 
+onclick="researcher_submit()"/>
+
+<div style="max-height: 0px; overflow-y: scroll;" id="researcher_results">
+</div>
+
+</fieldset>
+
+
+<fieldset id="judge" style="display:block;width:50%; float:right; margin:0; box-sizing:border-box">
+    <legend>Judge&mdash;Create Warrant</legend>
+    <fieldset><legend>Request</legend>
+    <select id="judge-agent">
+        <option value="PEP3 researcher">Researcher</option>
+        <option value="PEP3 investigator">Investigator</option>
+    </select>
+    is allowed 
+    to depseudonymize <input id="judge-pseudonym" data-is-valid="unknown" />.
+    <script>
+    $(function(){
+        var node = $('#judge-pseudonym');
+        node.on('change', function(){
+            node.attr('data-is-valid', base64check(node.val()));
+        });
+    });
+    </script>
+    </fieldset>
+    <input id="judge-submit" type="submit" value="Sign" />
+    <fieldset id="judge-signature-fieldset">
+        <legend>Warrant</legend>
+        <p>
+        The <span id="judge-actor"></span> is allowed to depseudonymize
+        the following encrypted pseudonym.
+        </p>
+        <p id="judge-encrypted-pseudonym" style="width:25em;text-overflow:ellipsis;overflow:hidden;whitespace:nowrap"> </p>
+        <fieldset>
+            <legend>Signature</legend>
+            <p id="judge-signature" style="width:25em;text-overflow:ellipsis;overflow:hidden;whitespace:nowrap"> </p>
+        </fieldset>
+    </fieldset>
+    <script>
+    $(function(){
+        $('#judge-signature-fieldset').hide(1);
+
+        var node = $('#judge-submit');
+        node.on('click', function(){
+            var act = {
+                'actor': base64encode($('#judge-agent').val()),
+                'name': {
+                    'data': $('#judge-pseudonym').val(),
+                    // encryption is done for us by webdemo.py
+                    'state': 'UNENCRYPTED_PSEUDONYM' 
+                }
+            };
+            $('#judge-signature-fieldset').hide(1);
+            socket.emit('sign_warrant', act,
+                (answer)=> {
+                    success = true;
+                    if('error' in answer) {
+                        console.error(answer.error);
+                        success = false;
+                    } else {
+                        $('#judge-actor').text(answer.actor);
+                        $('#judge-signature').text(answer.warrant.signature);
+                        $('#judge-encrypted-pseudonym').text(
+                            answer.warrant.act.name.data);
+                        $('#judge-signature-fieldset').show(200);
+                    }
+                    operation_feedback($("#judge"), success);
+                });
+
+        });
+    });
+    </script>
+</fieldset>
+
+<fieldset id="depseudonymize" style="display:block; width:50%; float:left; margin:0; box-sizing:border-box">
+    <legend>
+    <select id="depseudonymize-agent">
+        <option value="researcher">Researcher</option>
+        <option value="investigator">Investigator</option>
+    </select>&mdash;Depseudonymize</legend>
+    <dl>
+        <dt>Encrypted pseudonym</dt><dd><input id="depseudonymize-pseudonym" data-is-valid="unknown" /></dd>
+        <dt>Signature</dt><dd><input id="depseudonymize-signature" data-is-valid="unknown" /></dd>
+    </dl>
+    <script>
+    $(function(){
+        var node1 = $('#depseudonymize-pseudonym');
+        var node2 = $('#depseudonymize-signature');
+        node1.on('change', function(){
+            node1.attr('data-is-valid', base64check(node1.val()));
+        });
+        node2.on('change', function(){
+            node2.attr('data-is-valid', base64check(node2.val()));
+        });
+    });
+    </script>
+    <input id="depseudonymize-submit" type="submit" value="Submit request" />
+    <fieldset id="depseudonymize-result-fieldset">
+        <legend>Result</legend>
+        <p id="depseudonymize-result" style="width:25em;text-overflow:ellipsis;overflow:hidden;whitespace:nowrap"> </p>
+    </fieldset>
+    <script>
+    $(function(){
+        $('#depseudonymize-fieldset').hide(1);
+
+        var node = $('#depseudonymize-submit');
+        var agent = $('#depseudonymize-agent').val();
+        node.on('click', function(){
+            var warrant = {
+                'act': {
+                    'actor': base64encode("PEP3 " + agent),
+                    'name': {
+                        'data': $('#depseudonymize-pseudonym').val(),
+                        'state': 'ENCRYPTED_PSEUDONYM'
+                    }
+                },
+                'signature': $('#depseudonymize-signature').val()
+            };
+            $('#depseudonymize-signature-fieldset').hide(1);
+            socket.emit('rpc', agent, undefined,
+                'Depseudonymize', [warrant], undefined, 
+                    (answer)=> {
+                        success = true;
+                        if('error' in answer) {
+                            success = false;
+                            console.error(answer.error);
+                        }  else {
+                            $('#depseudonymize-result').text(
+                                format_ipv6address(
+                                    base64decode(answer.results[0].data)));
+                            $('#depseudonymize-result-fieldset').show(200);
+                        }
+                        operation_feedback($("#depseudonymize"), success);
+                    });
+
+        });
+    });
+    </script>
+</fieldset>
+
+{% endblock %}
+
