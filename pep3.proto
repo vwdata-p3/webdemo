@@ -242,8 +242,8 @@ message RelocalizationResponse {
 message DepseudonymizationRequest {
 	message Warrant {
 		message Act {
-			// TODO: perhaps not polymorphically encrypted,
-			// but for the actor; actor might then be removed?
+                        // TODO: can "actor" be removed now that
+                        // name is encrypted for her?
 			Pseudonymizable name = 1;
 			bytes actor = 2;
 		}
