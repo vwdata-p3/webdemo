@@ -2,6 +2,8 @@
 sudo apt-get install libsqlite3-dev libsqlite3-0 python3-dev libffi-dev libssl-dev zlib1g-dev python3-pip
 
 pip3 install grpcio grpcio-tools psycopg2-binary pyopenssl sqlalchemy pysqlite3 Flask flask-socketio eventlet parsimonious cffi
+# or: pip3 install -r python-requirements.txt
+# or: make venv
 
 # make the pep3_pb2(_grpc) and _ristretto modules
 make

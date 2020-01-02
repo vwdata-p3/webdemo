@@ -31,6 +31,13 @@ benchmark_%.dot: benchmark_%.profile
 
 benchmark_%.png: benchmark_%.dot
 	dot -Tpng $< -o $@
+
+venv: python-requirements.txt
+	python3 -m venv venv
+	( \
+	    source venv/bin/activate ;\
+	    pip install -r python-requirements.txt ;\
+	)
 	
 .PHONY: clean
 clean:
@@ -40,3 +47,4 @@ clean:
 	-rm benchmark_*.png
 	-rm _ristretto*
 	-rm ristretto_is_build
+	-rm -r venv
