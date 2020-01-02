@@ -435,6 +435,7 @@ function check_query(node) {
 
 socket.on('peer_message', function(data){
     var peerNode = $("#peer-"+data['peer_name']);
+    console.log(data);
     peerNode.animate({backgroundColor: '#AAFFAA'},20);
     peerNode.animate({backgroundColor: 'white'},200);
 });
