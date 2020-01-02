@@ -68,6 +68,83 @@ class Benchmarks:
                 raise err
 
 
+    def benchmark_store_several(self, args):
+        parser = argparse.ArgumentParser("... store_several")
+        parser.add_argument("--streams",
+                help="number of streams to use",
+                type=int, default="10")
+        parser.add_argument("--batchsize",
+                help="number of flowrecords per batch",
+                type=int, default="1024")
+        parser.add_argument("--batches",
+                help="number of batches per stream",
+                type=int, default="10")
+        args = parser.parse_args(args)
+
+        it = common.iter_threadsafe(
+                self._benchmark_store_several_generator(args))
+
+        gens = []
+        for i in range(args.streams):
+            gens.append(self.collector.connect_to('collector')\
+                    .Store(it))
+        for gen in gens:
+            for feedback in gen:
+                pass
+
+    def _benchmark_store_several_generator(self, args):
+        for i in range(args.batches):
+            request = pep3_pb2.StoreRequest()
+            request.id = os.urandom(16)
+            for j in range(args.batchsize):
+                flowrecord = request.records.add()
+
+                flowrecord.source_ip.data = os.urandom(16)
+                flowrecord.source_ip.state = pep3_pb2.Pseudonymizable.UNENCRYPTED_NAME
+                flowrecord.destination_ip.data = os.urandom(16)
+                flowrecord.destination_ip.state = \
+                        pep3_pb2.Pseudonymizable.UNENCRYPTED_NAME
+                flowrecord.anonymous_part.number_of_bytes = 123
+                flowrecord.anonymous_part.number_of_packets = 456
+        
+            yield request
+
+    def benchmark_depseudonymize(self, args):
+        ip = os.urandom(16)
+
+        # manually compute investigator-local pseudonym
+        pseudonym_secrets = {}
+        for peer_secrets in self.args.secrets.peers.values():
+            for shard, shard_secrets in peer_secrets.by_shard.items():
+                pseudonym_secrets[shard] \
+                        = shard_secrets.pseudonym_component_secret
+
+        s = 1
+        e = ed25519.scalar_unpack(common.sha256(b"PEP3 investigator"))
+        for secret in pseudonym_secrets.values():
+            s *= pow(ed25519.scalar_unpack(secret),e,ed25519.l)
+            s %= ed25519.l
+
+        investigator_local_ip = ( ed25519.Point.lizard(ip)*s ).pack()
+
+        # manually create warrant
+        warrant = pep3_pb2.DepseudonymizationRequest.Warrant()
+        warrant.act.actor = b"PEP3 investigator"
+        warrant.act.name.state = pep3_pb2.Pseudonymizable.UNENCRYPTED_PSEUDONYM
+        warrant.act.name.data = investigator_local_ip
+
+        self.investigator.encrypt([ warrant.act.name ], 
+                cheats.public_key(self.args.secrets,
+                    b"PEP3 investigator", 'pseudonym'))
+
+        warrant.signature = crypto.sign(
+                crypto.load_privatekey(crypto.FILETYPE_PEM,
+                    self.args.secrets.root_certificate_keys.warrants),
+                warrant.act.SerializeToString(), 'sha256')
+
+        result = self.investigator.connect_to("investigator")\
+                .Depseudonymize(warrant)
+
     def benchmark_enroll(self, args):
         pep3.PepContext(self.args.config, 
                 self.args.secrets, "investigator", None,

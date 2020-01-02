@@ -1,7 +1,8 @@
 import threading
 import collections
 import os 
-
+import xos
+import traceback
 
 # A Tower is constructed by multiple threads floor-by-floor.
 # Each thread may start construction of a floor by calling add_floor(),
@@ -68,18 +69,23 @@ class Tower:
 class Cache:
     DEBUG_ENV_NAME = "PEP3_CACHE_DEBUG"
 
-    def __init__(self, constructor, batchsize):
-        # TODO: add expiry
+    def __init__(self, constructor, batchsize, maxsize=None):
         self._constructor = constructor
         assert(batchsize>0)
         self._batchsize = batchsize
 
-        self._on_hand = {}  # cached values
+        if maxsize==None:
+            maxsize = batchsize*batchsize
+        self._maxsize = maxsize
+
+        self._on_hand = collections.OrderedDict()  # cached values
         self._in_progress = set() # items for which the values as currently computed
         self._in_line = [] # items that will soon go in a batch
         self._in_line_set = set() # TODO: use an "OrderedSet" datastructure
 
         self._in_line_callbacks = [] # callbacks for items in line, and before
+        
+        self._claimcount = collections.Counter() # number of requests for item
 
         self._lock = threading.RLock()
         self._tower = Tower()
@@ -89,27 +95,23 @@ class Cache:
             self._debug_item_to_batch = {}
 
 
-    def __getitem__(self, key):
-        try:
-            return self._on_hand[key]
-        except KeyError:
-            raise Cache.KeyError(key)
-
     def request(self, items, callback=None, flush=False):
         with self._lock:
             for item in items:
-                if item in self._on_hand \
-                        or item in self._in_progress:
+                self._claimcount[item] += 1
+                if item in self._in_progress:
+                    continue
+                if item in self._on_hand:
+                    self._on_hand.move_to_end(item)
                     continue
                 if item not in self._in_line_set:
                     self._in_line_set.add(item)
                     self._in_line.append(item)
             batches = list(self._prepare_batches(flush))
             assert(len(self._in_line) < self._batchsize)
-            if callback != None:
-                self._in_line_callbacks.append(callback \
-                        if not self._debug else (callback, list(items)) )
+            self._in_line_callbacks.append( (callback, tuple(items)) ) 
         self._emit_batches(batches)
+        self._prune()
 
     def flush(self, callback=None):
         self.request((), callback, flush=True)
@@ -148,25 +150,51 @@ class Cache:
                     self._on_hand[item] = values[i]
                     self._in_progress.remove(item)
             callbacks = batch._floor.complete()
-            for callback_no, callback in enumerate(callbacks):
+            for callback_no, (callback, items) in enumerate(callbacks):
+                if self._debug:
+                    for item in items:
+                        if item not in self._on_hand:
+                            with self._lock:
+                                self._print_keyerror_debug_info(item,
+                                        batches, callback_no, 
+                                        callback, callbacks)
+                                xos.terminate()
+                results = {}
+                for item in items:
+                    if item not in self._on_hand:
+                        self._print_keyerror_debug_info(ke.args[0], 
+                                batches, callback_no, callback, callbacks)
+                        xos.terminate()
+                    results[item] = self._on_hand[item]
                 try:
-                    if not self._debug:
-                        callback()
-                    else:
-                        callback, items = callback
-                        for item in items:
-                            if item not in self._on_hand:
-                                with self._lock:
-                                    self._print_keyerror_debug_info(item,
-                                            batches, callback_no, 
-                                            callback, callbacks)
-                                    common.terminate()
-                        callback()
-                except Cache.KeyError as ke:
-                    with self._lock:
-                        self._print_keyerror_debug_info(ke.key, batches, 
-                                callback_no, callback, callbacks)
-                        common.terminate()
+                    if callback != None:
+                        callback(results)
+                except Exception as e:
+                    traceback.print_exc()
+                    print("note: this unhandled exception in"
+                            " a Cache.request callback causes termination")
+                    xos.terminate()
+                with self._lock:
+                    for item in items:
+                        cc = self._claimcount[item]-1
+                        if cc==0:
+                            del self._claimcount[item]
+                        else:
+                            self._claimcount[item] = cc
+
+    def _prune(self):
+        items_visited = 0
+        with self._lock:
+            while items_visited < len(self._on_hand) > self._maxsize:
+                # get oldest item of cache, the one that was inserted first
+                item = next(iter(self._on_hand))
+                items_visited += 1
+                if self._claimcount[item] == 0:
+                    del self._on_hand[item]
+                else:
+                    self._on_hand.move_to_end(item)
+            if len(self._on_hand) > self._maxsize:
+                raise RuntimeError("cache overflow")
 
     def _print_keyerror_debug_info(self, key, batches, callback_no,
             callback, callbacks):

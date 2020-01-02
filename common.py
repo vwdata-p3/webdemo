@@ -7,18 +7,11 @@ import functools
 import queue
 import sys
 import collections
-import signal
-import os
 import contextlib
 
 import pep3_pb2
 import grpc
 import grpc._channel
-
-def terminate():
-    pid = os.getpid()
-    print(f"terminating..")
-    os.kill(pid,signal.SIGTERM)
 
 def sha256hmac(secret, msg):
     return hmac.new(secret, msg, hashlib.sha256).digest()

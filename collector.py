@@ -91,14 +91,14 @@ class Collector(pep3_pb2_grpc.CollectorServicer):
                 self.pep.config.warrants.to_sf)
         return [ p for p in pseudonymizables ]
 
-    def _handle_request_with_cached_ips(self, request):
+    def _handle_request_with_cached_ips(self, request, results):
         for flowrecord in request.records:
             assert(flowrecord.source_ip.state
                     ==pep3_pb2.Pseudonymizable.UNENCRYPTED_NAME)
             assert(flowrecord.destination_ip.state
                     ==pep3_pb2.Pseudonymizable.UNENCRYPTED_NAME)
-            flowrecord.source_ip.CopyFrom(self.cache[flowrecord.source_ip.data])
-            flowrecord.destination_ip.CopyFrom(self.cache[
+            flowrecord.source_ip.CopyFrom(results[flowrecord.source_ip.data])
+            flowrecord.destination_ip.CopyFrom(results[
                     flowrecord.destination_ip.data])
         self.queue.put(request)
 
