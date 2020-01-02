@@ -960,23 +960,21 @@ class PepContext:
         unused_peers = set(self.global_config.peers)
         unassigned_shards = set(self.global_config.shards)
 
+        # keeps track of the shards in the chain
+        shards_in_the_chain = set()  
+
         while len(unassigned_shards)>0:
-            assert(len(unused_peers)>0)
+            if len(unused_peers)==0:
+                raise RuntimeError("Not enough working peers")
 
             peer = random.choice(list(unused_peers))
             unused_peers.remove(peer)
             
             shards = unassigned_shards \
                             & set(self.global_config.peers[peer].shards)
-            unassigned_shards -= shards
 
-            plan.append( (peer, shards) )
+            # plan.append( (peer, shards) )
 
-        # keeps track of the shards in the chain
-        shards_in_the_chain = set()  
-
-        # execute the plan
-        for peer, shards in plan:
             request.ClearField('which_shards')
             request.ClearField('reminders')
             request.which_shards.extend(shards)
@@ -987,10 +985,17 @@ class PepContext:
                         reminder.HasField("pseudonym"):
                     reminder_ = request.reminders.add()
                     reminder_.CopyFrom(reminder)
+            
+            try:
+                resp = self.connect_to("peer", peer).Depseudonymize(request)
+                # TODO: check the proofs provided by the peer
+            except grpc.RpcError as e:
+                logging.warning(f"depseudonymization request to peer {peer}"
+                        f" failed: {e.details()}")
+                # TODO: only except unavailable peers, not other errors
+                continue
 
-            resp = self.connect_to("peer", peer).Depseudonymize(request)
-
-            # TODO: should we too check the proofs provided by the peer?
+            unassigned_shards -= shards
             
             link = request.chain.add()
             link.peer = peer
