@@ -35,7 +35,7 @@ benchmark_%.png: benchmark_%.dot
 venv: python-requirements.txt
 	python3 -m venv venv
 	( \
-	    source venv/bin/activate ;\
+	    . venv/bin/activate ;\
 	    pip install -r python-requirements.txt ;\
 	)
 	
