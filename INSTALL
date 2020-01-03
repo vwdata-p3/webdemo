@@ -1,5 +1,5 @@
 # Depedencies on Debian:
-sudo apt-get install libsqlite3-dev libsqlite3-0 python3-dev libffi-dev libssl-dev zlib1g-dev python3-pip
+sudo apt-get install libsqlite3-dev libsqlite3-0 python3-dev libffi-dev libssl-dev zlib1g-dev python3-pip python3-venv
 
 pip3 install grpcio grpcio-tools psycopg2-binary pyopenssl sqlalchemy pysqlite3 Flask flask-socketio eventlet parsimonious cffi
 # or: pip3 install -r python-requirements.txt
