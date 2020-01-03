@@ -11,8 +11,9 @@
                 <script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js"></script>
 
 		<script type="text/javascript">
-			var socket = io.connect('http://' + document.domain 
-				+ ":" + location.port);
+		    var socket = io(location.origin, {
+			path: location.pathname + "socket.io"
+		    });
 			socket.on('connect', function() {
 				console.log('websocket connected');
 			});

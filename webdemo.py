@@ -146,5 +146,5 @@ def handle_trigger_event():
 
 
 if __name__ == "__main__":
-    socketio.run(app)
+    socketio.run(app, port=1612)
 
