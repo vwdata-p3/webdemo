@@ -32,7 +32,7 @@ def emit_event(peer_name, msg):
         'message': pb.json_format.MessageToDict(msg)
     }
     
-    request = urllib.request.Request('http://localhost:5000/trigger_event',
+    request = urllib.request.Request('http://localhost:1612/trigger_event',
             urllib.parse.urlencode({
                 'event-name': 'peer_message',
                 'event-data': json.dumps(event)
