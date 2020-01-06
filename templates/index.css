@@ -8,7 +8,10 @@ dt {
     float: left;
     clear: left;
     width: 100px;
-    text-align: right;
+    text-align: left;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
 }
 
 dt::after {
@@ -16,7 +19,7 @@ dt::after {
 }
 
 dd {
-    margin: 0 0 0 110px;
+    margin: 0 0 0 105px;
     padding: 0 0 0.5em 0; 
 }
 
