@@ -1,4 +1,25 @@
 
+/* get dt and dd on one line */
+dl {
+    padding: 0.5em; 
+}
+
+dt {
+    float: left;
+    clear: left;
+    width: 100px;
+    text-align: right;
+}
+
+dt::after {
+    content: ":";
+}
+
+dd {
+    margin: 0 0 0 110px;
+    padding: 0 0 0.5em 0; 
+}
+
 
 [class^="value-"] {
 }
