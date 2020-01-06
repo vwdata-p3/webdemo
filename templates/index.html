@@ -471,10 +471,13 @@ socket.on('peer_message', function(data){
     });
 });</script>
 {% endfor %}
+<p style="padding-left: 1em">
+Click on a peer to activate/deactive it.
+</p>
 </div>
 </fieldset>
 
-<fieldset id="collector" style="display:block; width: 50%; box-sizing:border-box; margin:0; float:left"><legend>Collector&mdash;Store flowrecords</legend>
+<fieldset id="collector" style="display:block; width: 50%; box-sizing:border-box; margin:0; float:left"><legend>Metering process&mdash;Store flowrecords</legend>
 <dl>
     <dt>Source</dt>
     <dd>[ <input id="src_ip" onchange="check_ip($(this))" size="35" /> ] :
@@ -526,7 +529,7 @@ onclick="collector_submit()" />
     <option value="researcher">Researcher</option>
     <option value="investigator">Investigator</option>
 </select>&mdash;Retrieve flowrecords</legend>
-<textarea title="" rows="10" style="width:100%" id="query" onchange="check_query($(this))">
+<textarea title="" rows="7" style="width:100%" id="query" onchange="check_query($(this))">
 SELECT peped_flows.p_src_ip, peped_flows.src_port, 
 peped_flows.p_dst_ip, peped_flows.dst_port,
 peped_flows.packets FROM peped_flows
@@ -536,9 +539,10 @@ LIMIT 10
 <ul id='parameters' style="list-style-type:none">
 	<li id='addbuttonli'><input type="button" value="Add parameter" onclick="add_parameter(null, null, null)"/></li>
 </ul>
-
+<p>
 <input id="researcher_submit" type="submit" value="Submit query" 
 onclick="researcher_submit()"/>
+N.B. Only a very restricted <a href="https://github.com/vwdata-p3/webdemo/blob/master/resources/sql.grammar">subset of SQL</a> can be used here.</p>
 
 <div style="max-height: 0px; overflow-y: scroll;" id="researcher_results">
 </div>
