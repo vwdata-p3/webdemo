@@ -27,6 +27,7 @@ class Peer(pep3_pb2_grpc.PeerServicer):
         self.messages_queues = []
 
     def _dispatch_message(self, msg):
+        msg.modePlusOne = self._mode+1
         with self.messages_lock:
             for q in self.messages_queues:
                 q.put(msg)
@@ -454,5 +455,15 @@ class Peer(pep3_pb2_grpc.PeerServicer):
         common.authenticate(context, must_be_one_of=(b"PEP3 demonstrator",))
 
         self._mode = mode.mode
+        self._dispatch_message(pep3_pb2.Message(text="Set mode", 
+            code=pep3_pb2.Message.OK))
         
         return pep3_pb2.Void()
+
+    def Demo_Ping(self, void, context):
+        common.authenticate(context, must_be_one_of=(b"PEP3 demonstrator",))
+        self._dispatch_message(pep3_pb2.Message(text="Pong", 
+            code=pep3_pb2.Message.OK))
+
+        return pep3_pb2.Void()
+

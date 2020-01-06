@@ -436,6 +436,8 @@ function check_query(node) {
 socket.on('peer_message', function(data){
     var peerNode = $("#peer-"+data['peer_name']);
     console.log(data);
+    peerNode.attr('data-state', data['message']['modePlusOne']-1);
+    // TODO: make color dependent on data['message']['code']
     peerNode.animate({backgroundColor: '#AAFFAA'},20);
     peerNode.animate({backgroundColor: 'white'},200);
 });
@@ -452,23 +454,38 @@ socket.on('peer_message', function(data){
 <script>$(function(){
     var node = $("#peer-{{ peer_name}}");
     
-    node.attr('data-state', 0);  // 0: ON, 1: FAULTY, 2: OFF, -1: CHANGING
+    node.attr('data-state', -1);  
+    // 0: ON, 1: FAULTY, 2: OFF, -1: CHANGING/UNKNOWN
 
     node.on('click', function(){
-        var state = (node.attr('data-state') + 1) % 3;
-        if(state==1) state=2; // skip the fault state for now TODO: remove
+        var state = node.attr('data-state');
+
+        if (state == -1) {
+            state = 0;
+        } else {
+            state = (node.attr('data-state') + 1) % 3;
+            if(state==1) state=2; // skip the fault state for now TODO: remove
+        }
 
         node.attr('data-state', -1);
-        
+
         socket.emit('rpc', 'peer', '{{ peer_name }}',
             'Demo_SetMode', [{'mode': state}], 'demonstrator', 
             (answer)=> {
                 if('error' in answer) {
                     console.error(answer.error);
                 }
-                node.attr('data-state', state);
             });
     });
+
+    // have the peer send a message with its mode
+    socket.emit('rpc', 'peer', '{{ peer_name }}',
+        'Demo_Ping', [{}], 'demonstrator', 
+        (answer)=> {
+            if('error' in answer) {
+                console.error(answer.error);
+            }
+        });
 });</script>
 {% endfor %}
 <p style="padding-left: 1em">
