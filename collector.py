@@ -6,9 +6,9 @@ import pep3_pb2_grpc
 import common
 import xthreading
 import xqueue
+import xos
 
 import queue
-import traceback
 import functools
 
 class Collector(pep3_pb2_grpc.CollectorServicer):
@@ -29,14 +29,9 @@ class Collector(pep3_pb2_grpc.CollectorServicer):
         self.process_queue_fut.result() # wait
 
     def _process_queue_try(self):
-        try:
+        with xos.terminate_on_exception("Collector: "
+                "fatal error on processing thread:"):
             self._process_queue()
-        except Exception as e:
-            print("Collector: unexpected (and fatal)  error:")
-            print("Exception on collector queue processing thread:")
-            traceback.print_exc()
-            print("Terminating Collector")
-            self.pep.grpc_server.stop(0)
 
     def _process_queue(self):
         try:

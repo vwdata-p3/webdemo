@@ -15,6 +15,7 @@ socketio = flask_socketio.SocketIO(app)
 import pep3
 import pep3_pb2
 import common
+import xos
 import sql
 import database
 

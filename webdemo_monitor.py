@@ -8,6 +8,7 @@ import urllib.request
 import urllib.parse
 import json
 import base64
+import xos
 
 import google.protobuf as pb
 import google.protobuf.json_format
@@ -39,6 +40,9 @@ def emit_event(peer_name, msg):
             }).encode('utf-8'))
     urllib.request.urlopen(request).read()
 
+def try_monitor_peer(peer_name):
+    with xos.terminate_on_exception(f"error on monitor of {peer_name}"):
+        monitor_peer(peer_name)
 
 def monitor_peer(peer_name):
     peer_stub = pep3.PepContext(config, secrets, 'demonstrator', None)\
@@ -63,5 +67,5 @@ def monitor_peer(peer_name):
 if __name__=="__main__":
     for peer_name in config.peers.keys():
         threading.Thread(name=f'monitoring-of-{peer_name}',
-                target=monitor_peer, args=(peer_name,)).start()
+                target=try_monitor_peer, args=(peer_name,)).start()
     

@@ -4,8 +4,8 @@ import pep3_pb2
 import common
 import xthreading
 import xqueue
+import xos
 
-import traceback
 import queue
 import functools
 
@@ -72,14 +72,9 @@ class StoreProcessor:
             fbq.stop()
 
     def _process_queue_try(self):
-        try:
+        with xos.terminate_on_exception("Storagefacility: "
+                "fatal error on processing thread:"):
             self._process_queue()
-        except Exception as e:
-            print("StorageFacility: unexpected (and fatal)  error:")
-            print("Exception on processing thread:")
-            traceback.print_exc()
-            print("Terminating StorageFacility")
-            self.pep.grpc_server.stop(0)
 
     def _process_queue(self):
         try:
