@@ -23,10 +23,13 @@ function add_parameter(name,value,pseudonym) {
 		parameterName.setAttribute('value',name);
 	}
 
+        parameterName.setAttribute('placeholder', 'parameter name');
+
 	li.appendChild(document.createTextNode(" = "));
 
 	var parameterValue = document.createElement('input');
 	parameterValue.setAttribute('id', 'parameter-value-' + index);
+	parameterValue.setAttribute('placeholder', 'value');
 	li.appendChild(parameterValue);
 
 	if (value!=null) {
