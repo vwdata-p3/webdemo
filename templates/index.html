@@ -494,7 +494,7 @@ Click on a peer to activate/deactivate it.
 </div>
 </fieldset>
 
-<fieldset id="collector" style="display:block; width: 50%; box-sizing:border-box; margin:0; float:left"><legend>Metering process&mdash;Store flowrecords</legend>
+<fieldset id="collector" style="display:block; width: 50%; box-sizing:border-box; margin:0; float:left"><legend><strong>(1)</strong> Metering process&mdash;Store flowrecords</legend>
 <dl>
     <dt>Source</dt>
     <dd>[ <input id="src_ip" onchange="check_ip($(this))" size="35" /> ] :
@@ -542,7 +542,7 @@ onclick="collector_submit()" />
 </fieldset>
 
 <fieldset id="researcher" style="width:50%; box-sizing:border-box; float:left; margin:0; display:inline-block">
-<legend><select id="researcher-select">
+    <legend><strong>(2)</strong> <select id="researcher-select">
     <option value="researcher">Researcher</option>
     <option value="investigator">Investigator</option>
 </select>&mdash;Retrieve flowrecords</legend>
@@ -559,7 +559,7 @@ LIMIT 10
 <p>
 <input id="researcher_submit" type="submit" value="Submit query" 
 onclick="researcher_submit()"/>
-N.B. Only a very restricted <a href="https://github.com/vwdata-p3/webdemo/blob/master/resources/sql.grammar">subset of SQL</a> can be used here.</p>
+(N.B. Only a very restricted <a href="https://github.com/vwdata-p3/webdemo/blob/master/resources/sql.grammar">subset of SQL</a> can be used here.)</p>
 
 <div style="max-height: 0px; overflow-y: scroll;" id="researcher_results">
 </div>
@@ -568,14 +568,15 @@ N.B. Only a very restricted <a href="https://github.com/vwdata-p3/webdemo/blob/m
 
 
 <fieldset id="judge" style="display:block;width:50%; float:right; margin:0; box-sizing:border-box">
-    <legend>Judge&mdash;Create Warrant</legend>
+    <legend><strong>(3)</strong> Judge&mdash;Create Warrant</legend>
     <fieldset><legend>Request</legend>
-    <select id="judge-agent">
+        <p><select id="judge-agent">
         <option value="PEP3 researcher">Researcher</option>
         <option value="PEP3 investigator">Investigator</option>
     </select>
     is allowed 
-    to depseudonymize <input id="judge-pseudonym" data-is-valid="unknown" />.
+    to depseudonymize <input id="judge-pseudonym" data-is-valid="unknown" placeholder="pseudonym" />.</p>
+    <p>(Submit a query under &ldquo;Retrieve flowrecords&rdquo; to get a pseudonym.)</p>
     <script>
     $(function(){
         var node = $('#judge-pseudonym');
@@ -635,7 +636,7 @@ N.B. Only a very restricted <a href="https://github.com/vwdata-p3/webdemo/blob/m
 </fieldset>
 
 <fieldset id="depseudonymize" style="display:block; width:50%; float:left; margin:0; box-sizing:border-box">
-    <legend>
+    <legend><strong>(4)</strong>
     <select id="depseudonymize-agent">
         <option value="researcher">Researcher</option>
         <option value="investigator">Investigator</option>
