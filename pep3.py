@@ -714,7 +714,9 @@ class PepContext:
         self._executor = self._executor_type(
                 max_workers=self.config.number_of_threads,
                 thread_name_prefix=str(self))
-        server = grpc.server(self._executor)
+        server = grpc.server(self._executor, 
+                # do not allow the reuse of ports
+                options=(('grpc.so_reuseport',0),))
         server.add_secure_port(self.config.location.listen_address, 
                 server_credentials)
 
