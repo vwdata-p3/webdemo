@@ -12,6 +12,7 @@ import ed25519
 import elgamal
 import schnorr
 import cryptopu
+import time
 
 MODE_OK = 0
 MODE_FAULTY = 1
@@ -21,6 +22,7 @@ class Peer(pep3_pb2_grpc.PeerServicer):
     def __init__(self, pep):
         self.pep = pep
         self._mode = 0
+        self._starttime = time.time()
 
         # for monitoring
         self.messages_lock = threading.Lock()
@@ -460,10 +462,12 @@ class Peer(pep3_pb2_grpc.PeerServicer):
         
         return pep3_pb2.Void()
 
-    def Demo_Ping(self, void, context):
+    def Demo_Ping(self, request, context):
         common.authenticate(context, must_be_one_of=(b"PEP3 demonstrator",))
-        self._dispatch_message(pep3_pb2.Message(text="Pong", 
-            code=pep3_pb2.Message.OK))
+        if request.cause_message:
+            self._dispatch_message(pep3_pb2.Message(text="Pong", 
+                code=pep3_pb2.Message.OK))
 
-        return pep3_pb2.Void()
+        return pep3_pb2.PingResponse(
+                uptime=int(time.time()-self._starttime))
 

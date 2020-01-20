@@ -116,6 +116,14 @@ message Mode {
     Enum mode = 1;
 }
 
+message PingRequest {
+    bool cause_message = 1;
+}
+
+message PingResponse {
+    uint32 uptime = 1;
+}
+
 service StorageFacility {
 	// flowrecords in the StoreRequests should be encrypted 
         // and localized for the SF.
@@ -169,8 +177,9 @@ service Peer {
         // for demonstration purposes:
         rpc Demo_Monitor(Void) returns (stream Message);
         rpc Demo_SetMode(Mode) returns (Void); 
-        rpc Demo_Ping(Void) returns (Void); // causes a message
+        rpc Demo_Ping(PingRequest) returns (PingResponse);
 }
+
 message EnrollmentResponse {
 	message ByShard {
 		map<string,bytes> private_local_keys = 1; // by domain

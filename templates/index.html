@@ -6,6 +6,46 @@
 <style>{% include "index.css" %}</style>
 
 <script>
+function ping_peer(peer_name, cause_message) {
+    socket.emit('rpc', 'peer', peer_name,
+        'Demo_Ping', [{'cause_message': cause_message}], 'demonstrator', 
+        (answer)=> {
+            handle_pingresponse(answer, peer_name);
+        });
+}
+
+
+function handle_pingresponse(answer, peer_name) {
+    if('error' in answer) {
+        console.error(answer.error);
+        return;
+    }
+    console.assert(answer['results'].length==1);
+    var result = answer['results'][0];
+    var uptime = result['uptime'];
+    update_uptime(uptime);
+    
+    // keep pinging
+    setTimeout(function(){
+        ping_peer(peer_name, false);
+    }, 10000);
+}
+
+function update_uptime(uptime) {
+    $("#uptime").text("up " + describe_uptime(uptime) + ".");
+}
+
+function describe_uptime(uptime) {
+    if (uptime<60) {
+        return "less than a minute";
+    } 
+    uptime = Math.round(uptime / 60);
+    if (uptime==1) {
+        return "about a minute";
+    }
+    return uptime.toString() + " minutes";
+}
+
 function add_parameter(name,value,pseudonym) {
 	var ul = document.getElementById('parameters');
 
@@ -449,6 +489,16 @@ socket.on('peer_message', function(data){
 {% endblock %}
 
 {% block body %}
+
+<div class="header">
+<p>
+For more explainations, please consult the
+<a href="https://vwdata-p3.github.io/demo.html">accompanying text.</a>
+Note: this demo will reset every 10 minutes.
+(It's been <span id="uptime">down?</span>)
+</p>
+</div>
+<div>
 <fieldset id="peers" style="display: block">
 <legend>Peers</legend>
 <div>
@@ -482,13 +532,7 @@ socket.on('peer_message', function(data){
     });
 
     // have the peer send a message with its mode
-    socket.emit('rpc', 'peer', '{{ peer_name }}',
-        'Demo_Ping', [{}], 'demonstrator', 
-        (answer)=> {
-            if('error' in answer) {
-                console.error(answer.error);
-            }
-        });
+    ping_peer('{{ peer_name }}', true);
 });</script>
 {% endfor %}
 <p style="padding-left: 1em">
@@ -703,6 +747,7 @@ onclick="researcher_submit()"/>
     });
     </script>
 </fieldset>
+</div>
 
 {% endblock %}
 
