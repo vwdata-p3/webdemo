@@ -6,30 +6,6 @@
 <style>{% include "index.css" %}</style>
 
 <script>
-function ping_peer(peer_name, cause_message) {
-    socket.emit('rpc', 'peer', peer_name,
-        'Demo_Ping', [{'cause_message': cause_message}], 'demonstrator', 
-        (answer)=> {
-            handle_pingresponse(answer, peer_name);
-        });
-}
-
-
-function handle_pingresponse(answer, peer_name) {
-    if('error' in answer) {
-        console.error(answer.error);
-        return;
-    }
-    console.assert(answer['results'].length==1);
-    var result = answer['results'][0];
-    var uptime = result['uptime'];
-    update_uptime(uptime);
-    
-    // keep pinging
-    setTimeout(function(){
-        ping_peer(peer_name, false);
-    }, 10000);
-}
 
 function update_uptime(uptime) {
     $("#uptime").text("up " + describe_uptime(uptime) + ".");
@@ -489,13 +465,22 @@ function check_query(node) {
 
 }
 
+var codecolors = {
+    'OK': "#AAFFAA",
+    'ERROR': "#FFAAAA",
+    'WARNING': "#FFFFAA"
+};
+
 socket.on('peer_message', function(data){
     var peerNode = $("#peer-"+data['peer_name']);
-    console.log(data);
     peerNode.attr('data-state', data['message']['modePlusOne']-1);
-    // TODO: make color dependent on data['message']['code']
-    peerNode.animate({backgroundColor: '#AAFFAA'},20);
-    peerNode.animate({backgroundColor: 'white'},200);
+    update_uptime(data['uptime'])
+
+    var code = data['message']['code'];
+    if (code in codecolors) {
+        peerNode.animate({backgroundColor: codecolors[code]},20);
+        peerNode.animate({backgroundColor: 'white'},200);
+    }
 });
 
 </script>
@@ -545,7 +530,13 @@ Note: this demo will reset every 10 minutes.
     });
 
     // have the peer send a message with its mode
-    ping_peer('{{ peer_name }}', true);
+    socket.emit('rpc', 'peer', '{{ peer_name }}',
+        'Demo_Ping', [{'cause_message': true}], 'demonstrator', 
+        (answer)=> {
+            if ('error' in answer) {
+                console.error(answer);
+            }
+        });
 });</script>
 {% endfor %}
 <p style="padding-left: 1em">

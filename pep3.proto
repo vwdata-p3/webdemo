@@ -99,6 +99,7 @@ message Message {
             ERROR = 1;
             WARNING = 2;
             OK = 3;
+            INFO = 4;
         }
 
         Code code = 1;

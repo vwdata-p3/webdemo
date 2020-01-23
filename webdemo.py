@@ -133,6 +133,10 @@ def _handle_rpc(server_type_name, instance_name, MethodName, messages, call_as):
 def handle_root():
     return flask.render_template('index.html', config=config)
 
+@app.route("/blank")
+def handle_blank():
+    # visited by the webdemo_monitor to see if we are online
+    return ""
 
 @app.route('/trigger_event', methods=['POST'])
 def handle_trigger_event():

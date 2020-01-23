@@ -14,14 +14,10 @@ import schnorr
 import cryptopu
 import time
 
-MODE_OK = 0
-MODE_FAULTY = 1
-MODE_OFF = 2
-
 class Peer(pep3_pb2_grpc.PeerServicer):
     def __init__(self, pep):
         self.pep = pep
-        self._mode = 0
+        self._mode = pep3_pb2.Mode.ON
         self._starttime = time.time()
 
         # for monitoring
@@ -38,7 +34,7 @@ class Peer(pep3_pb2_grpc.PeerServicer):
     def Relocalize(self, request, context):
         return self._mode
 
-    @Relocalize.case(MODE_OK)
+    @Relocalize.case(pep3_pb2.Mode.ON)
     def Relocalize(self, request, context):
         common_name = common.authenticate(context)
 
@@ -133,11 +129,11 @@ class Peer(pep3_pb2_grpc.PeerServicer):
 
         return response
 
-    @Relocalize.case(MODE_OFF)
+    @Relocalize.case(pep3_pb2.Mode.OFF)
     def Relocalize(self, request, context):
         context.abort(grpc.StatusCode.UNAVAILABLE, "Peer is OFF.")
 
-    @Relocalize.case(MODE_FAULTY)
+    @Relocalize.case(pep3_pb2.Mode.FAULTY)
     def Relocalize(self, request, context):
         return pep3_pb2.RelocalizationResponse()
 
@@ -201,15 +197,15 @@ class Peer(pep3_pb2_grpc.PeerServicer):
     def Depseudonymize(self, request, context):
         return self._mode
 
-    @Depseudonymize.case(MODE_OFF)
+    @Depseudonymize.case(pep3_pb2.Mode.OFF)
     def Depseudonymize(self, request, context):
         context.abort(grpc.StatusCode.UNAVAILABLE, "Peer is OFF.")
 
-    @Depseudonymize.case(MODE_FAULTY)
+    @Depseudonymize.case(pep3_pb2.Mode.FAULTY)
     def Depseudonymize(self, request, context):
         return pep3_pb2.DepseudonymizationResponse()
 
-    @Depseudonymize.case(MODE_OK)
+    @Depseudonymize.case(pep3_pb2.Mode.ON)
     def Depseudonymize(self, request, context):
         common_name = common.authenticate(context)
         e = ed25519.scalar_unpack(common.sha256(common_name))
@@ -466,7 +462,7 @@ class Peer(pep3_pb2_grpc.PeerServicer):
         common.authenticate(context, must_be_one_of=(b"PEP3 demonstrator",))
         if request.cause_message:
             self._dispatch_message(pep3_pb2.Message(text="Pong", 
-                code=pep3_pb2.Message.OK))
+                code=pep3_pb2.Message.INFO))
 
         return pep3_pb2.PingResponse(
                 uptime=int(time.time()-self._starttime))
