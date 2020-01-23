@@ -82,6 +82,7 @@ message StoreRequest {
 
 message StoreFeedback {
         bytes stored_id = 1; 
+        repeated string errors = 2;
 }
 
 

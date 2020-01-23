@@ -127,10 +127,18 @@ class StoreProcessor:
                     ==pep3_pb2.Pseudonymizable.ENCRYPTED_PSEUDONYM)
             assert(flowrecord.destination_ip.state
                     ==pep3_pb2.Pseudonymizable.ENCRYPTED_PSEUDONYM)
-            flowrecord.source_ip.CopyFrom(results[
-                    flowrecord.source_ip.data])
-            flowrecord.destination_ip.CopyFrom(results[
-                    flowrecord.destination_ip.data])
+            try:
+                flowrecord.source_ip.CopyFrom(results[
+                        flowrecord.source_ip.data].Value)
+                flowrecord.destination_ip.CopyFrom(results[
+                        flowrecord.destination_ip.data].Value)
+            except Exception as e:
+                feedback_queue = self.request_id_to_feedback_queue.pop(
+                        request.id)
+                feedback_queue.put(pep3_pb2.StoreFeedback(
+                    stored_id=request.id,
+                    errors=[traceback.format_exc()]))
+                return
         self.queue.put(request)
 
 

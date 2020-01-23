@@ -7,6 +7,8 @@ import common
 import xthreading
 import xqueue
 import xos
+import error
+import traceback
 
 import queue
 import functools
@@ -92,9 +94,18 @@ class Collector(pep3_pb2_grpc.CollectorServicer):
                     ==pep3_pb2.Pseudonymizable.UNENCRYPTED_NAME)
             assert(flowrecord.destination_ip.state
                     ==pep3_pb2.Pseudonymizable.UNENCRYPTED_NAME)
-            flowrecord.source_ip.CopyFrom(results[flowrecord.source_ip.data])
-            flowrecord.destination_ip.CopyFrom(results[
-                    flowrecord.destination_ip.data])
+            try: 
+                flowrecord.source_ip.CopyFrom(
+                        results[flowrecord.source_ip.data].Value)
+                flowrecord.destination_ip.CopyFrom(
+                        results[flowrecord.destination_ip.data].Value)
+            except Exception as e:
+                feedback_queue = self.request_id_to_feedback_queue.pop(
+                        request.id)
+                feedback_queue.put(pep3_pb2.StoreFeedback(
+                    stored_id=request.id,
+                    errors=[traceback.format_exc()]))
+                return
         self.queue.put(request)
 
 
@@ -135,7 +146,6 @@ class Collector(pep3_pb2_grpc.CollectorServicer):
         
         while expected_responses > 0:
             store_feedback = feedback_queue.get()
-            
             expected_responses -= 1
             yield store_feedback
 

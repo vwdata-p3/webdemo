@@ -4,6 +4,8 @@ import os
 import xos
 import traceback
 
+import error
+
 # A Tower is constructed by multiple threads floor-by-floor.
 # Each thread may start construction of a floor by calling add_floor(),
 # and 'store' some items on that floor by calling "store" on the returned Floor.
@@ -144,10 +146,11 @@ class Cache:
 
     def _emit_batches(self, batches):
         for batch in batches:
-            values = self._constructor(batch._items)
+            valuesOrError = error.catch(self._constructor, batch._items)
             with self._lock:
                 for i, item in enumerate(batch._items):
-                    self._on_hand[item] = values[i]
+                    self._on_hand[item] = valuesOrError.map(
+                            lambda values: values[i])
                     self._in_progress.remove(item)
             callbacks = batch._floor.complete()
             for callback_no, (callback, items) in enumerate(callbacks):

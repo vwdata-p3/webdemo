@@ -281,6 +281,8 @@ function collector_submit() {
         'Store', [flowrecords], undefined, (answer)=> {
         $('#collector_submit').prop('disabled',false);
 
+        // Store can fail in two ways:
+        // either the 'top-level' command fails..
         if("error" in answer) {
             console.error(answer.error);
             console.error(answer.traceback);
@@ -289,6 +291,17 @@ function collector_submit() {
 
             return;
         }
+        
+        // .. or one of requests failed.
+        for (var i = 0; i<answer.results.length; i++) {
+            var result = answer.results[i];
+            if (result.errors.length>0) {
+                console.error(result.errors);
+                operation_feedback($("#collector"), false);
+                return;
+            }
+        }
+
         operation_feedback($("#collector"), true);
     });
 }
