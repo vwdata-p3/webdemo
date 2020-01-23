@@ -534,7 +534,7 @@ Note: this demo will reset every 10 minutes.
         'Demo_Ping', [{'cause_message': true}], 'demonstrator', 
         (answer)=> {
             if ('error' in answer) {
-                console.error(answer);
+                console.error(answer.error);
             }
         });
 });</script>
