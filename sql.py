@@ -104,6 +104,9 @@ class QueryChecker(parsimonious.NodeVisitor):
         if expr=="pseudonymized":
             raise InvalidQuery("can't SUM(-) pseudonymized data")
 
+    def visit_count(self, node, children):
+        return "plain" # yes, pseudonyms can be counted
+
     def visit_sort_spec(self, node, children):
         if children[0]=="pseudonymized":
             raise InvalidQuery("can't order by pseudonymized data")
