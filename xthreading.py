@@ -182,6 +182,8 @@ class Cache:
                         cc = self._claimcount[item]-1
                         if cc==0:
                             del self._claimcount[item]
+                            if self._on_hand[item].IsError:
+                                del self._on_hand[item]
                         else:
                             self._claimcount[item] = cc
 
