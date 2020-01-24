@@ -22,10 +22,12 @@ def check_query(db_desc, param_desc, query):
 class QueryChecker(parsimonious.NodeVisitor):
     def __init__(self, db_desc, param_desc):
         for v in param_desc.values():
-            assert(v in ('plain','pseudonymized'))
+            assert(v in ('plain','pseudonymized')), "param_desc should only "\
+                    "contain 'plain' and 'pseudonymized'."
         for table,column_desc in db_desc.items():
             for column, v in column_desc.items():
-                assert(v in ('plain','pseudonymized'))
+                assert(v in ('plain','pseudonymized')), "db_desc should only "\
+                        "contain 'plain' and 'pseudonymized'."
 
         self.grammar = grammar
         self.db_desc = db_desc
@@ -36,7 +38,7 @@ class QueryChecker(parsimonious.NodeVisitor):
         for child in children:
             if child==None:
                 continue
-            assert(result==None)
+            assert(result==None), "did not expect two non-None values here!"
             result = child
         return result
 
@@ -96,7 +98,7 @@ class QueryChecker(parsimonious.NodeVisitor):
             opname = op_node.text.rstrip() 
             if opname in ("<","<=", ">", ">="):
                 raise InvalidQuery("can't use <, <=, >, >= on pseudonyms")
-            assert(opname in ("=", "<>"))
+            assert(opname in ("=", "<>")), "more operation types then expected"
         return None
 
     def visit_sum(self, node, children):
