@@ -38,7 +38,8 @@ class QueryChecker(parsimonious.NodeVisitor):
         for child in children:
             if child==None:
                 continue
-            assert(result==None), "did not expect two non-None values here!"
+            assert(result==None), "did not expect two non-None values in "\
+                    f"{node.expr_name}: {children}!"
             result = child
         return result
 
@@ -112,6 +113,9 @@ class QueryChecker(parsimonious.NodeVisitor):
     def visit_sort_spec(self, node, children):
         if children[0]=="pseudonymized":
             raise InvalidQuery("can't order by pseudonymized data")
+
+    def visit_order_by_clause(self, node, children):
+        pass # don't pass along children
 
     def visit_group_by_clause(self, node, children):
         pass # don't pass along children
