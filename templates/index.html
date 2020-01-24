@@ -728,7 +728,7 @@ onclick="researcher_submit()"/>
     </fieldset>
     <script>
     $(function(){
-        $('#depseudonymize-fieldset').hide(1);
+        $('#depseudonymize-result-fieldset').hide(1);
 
         var node = $('#depseudonymize-submit');
         var agent = $('#depseudonymize-agent').val();
@@ -743,7 +743,7 @@ onclick="researcher_submit()"/>
                 },
                 'signature': $('#depseudonymize-signature').val()
             };
-            $('#depseudonymize-signature-fieldset').hide(1);
+            $('#depseudonymize-result-fieldset').hide(1);
             socket.emit('rpc', agent, undefined,
                 'Depseudonymize', [warrant], undefined, 
                     (answer)=> {
