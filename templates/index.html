@@ -653,6 +653,7 @@ onclick="researcher_submit()"/>
     <script>
     $(function(){
         $('#judge-signature-fieldset').hide(1);
+        $("#depseudonymize-copy").prop('disabled', true);
 
         var node = $('#judge-submit');
         node.on('click', function(){
@@ -665,6 +666,7 @@ onclick="researcher_submit()"/>
                 }
             };
             $('#judge-signature-fieldset').hide(1);
+            $("#depseudonymize-copy").prop('disabled', true);
             socket.emit('sign_warrant', act,
                 (answer)=> {
                     success = true;
@@ -677,6 +679,7 @@ onclick="researcher_submit()"/>
                         $('#judge-encrypted-pseudonym').text(
                             answer.warrant.act.name.data);
                         $('#judge-signature-fieldset').show(200);
+                        $("#depseudonymize-copy").prop('disabled', false);
                     }
                     operation_feedback($("#judge"), success);
                 });
@@ -694,7 +697,8 @@ onclick="researcher_submit()"/>
     </select>&mdash;Depseudonymize</legend>
     <dl>
         <dt><abbr title="Encrypted pseudonym">Encr. p'nym</abbr></dt><dd><input id="depseudonymize-pseudonym" data-is-valid="unknown" /></dd>
-        <dt>Signature</dt><dd><input id="depseudonymize-signature" data-is-valid="unknown" /></dd>
+        <dt>Signature</dt><dd><input id="depseudonymize-signature" data-is-valid="unknown" /> 
+        <input id="depseudonymize-copy" type="submit" value="Copy from panel (3)"/>  </dd>
     </dl>
     <script>
     $(function(){
@@ -705,6 +709,15 @@ onclick="researcher_submit()"/>
         });
         node2.on('change', function(){
             node2.attr('data-is-valid', base64check(node2.val()));
+        });
+
+        // Copy from panel (3)
+        $('#depseudonymize-copy').on('click', function(){
+            console.log("hi there!");
+            $('#depseudonymize-pseudonym').val(
+                $('#judge-encrypted-pseudonym').text());
+            $('#depseudonymize-signature').val(
+                $('#judge-signature').text());
         });
     });
     </script>
