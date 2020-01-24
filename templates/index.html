@@ -734,8 +734,8 @@ onclick="researcher_submit()"/>
         $('#depseudonymize-result-fieldset').hide(1);
 
         var node = $('#depseudonymize-submit');
-        var agent = $('#depseudonymize-agent').val();
         node.on('click', function(){
+            var agent = $('#depseudonymize-agent').val();
             var warrant = {
                 'act': {
                     'actor': base64encode("PEP3 " + agent),
