@@ -632,7 +632,8 @@ onclick="researcher_submit()"/>
     $(function(){
         var node = $('#judge-pseudonym');
         node.on('change', function(){
-            node.attr('data-is-valid', base64check(node.val()));
+            node.attr('data-is-valid', base64check(node.val()) 
+                && (base64decode(node.val()).length==32) );
         });
     });
     </script>
@@ -657,10 +658,29 @@ onclick="researcher_submit()"/>
 
         var node = $('#judge-submit');
         node.on('click', function(){
+            var pseudonym = $('#judge-pseudonym').val();
+            var decoded_pseudonym;
+            try {
+                decoded_pseudonym = base64decode(pseudonym);
+            } catch(err) {
+                console.error(err);
+                operation_feedback($("#judge"), false);
+                return;
+            }
+            
+            // MARK
+            if (decoded_pseudonym.length != 32) {
+                console.error("pseudonym should be 32 bytes long, but is "
+                    + decoded_pseudonym.length.toString() + " bytes long.");
+                operation_feedback($("#judge"), false);
+                return;
+            }
+
+            node.prop('disabled', true);
             var act = {
                 'actor': base64encode($('#judge-agent').val()),
                 'name': {
-                    'data': $('#judge-pseudonym').val(),
+                    'data': pseudonym,
                     // encryption is done for us by webdemo.py
                     'state': 'UNENCRYPTED_PSEUDONYM' 
                 }
@@ -669,6 +689,7 @@ onclick="researcher_submit()"/>
             $("#depseudonymize-copy").prop('disabled', true);
             socket.emit('sign_warrant', act,
                 (answer)=> {
+                    node.prop('disabled', false);
                     success = true;
                     if('error' in answer) {
                         console.error(answer.error);
