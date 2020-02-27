@@ -23,6 +23,18 @@ class testReferencePoint(unittest.TestCase):
         self.assertTrue(ReferencePoint.B.is_exactly(
             ReferencePoint.unpack(ReferencePoint.B.pack())))
 
+    def test_basepoint_x(self):
+        UnnormalizedB = ReferencePoint.from_y_and_sign(
+                        4*fe_inv(5), True, check=False)
+        self.assertTrue(
+            ( 8*fe_inv(547505)-1 - UnnormalizedB.x**2) % q ==0)
+
+        self.assertFalse(fe_is_positive(
+            UnnormalizedB.x*UnnormalizedB.y))
+
+        self.assertEqual(ReferencePoint.B.x,
+                (-i*fe_inv(5)*4 )%q)
+
     def test_order_of_the_baseReferencePoint(self):
         self.assertEqual(ReferencePoint.B*l, ReferencePoint.Zero)
 
