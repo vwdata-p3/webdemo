@@ -386,5 +386,28 @@ class testJacobiQuartic(unittest.TestCase):
                     a_plus_b.refpoint().is_exactly(a.refpoint()+b.refpoint()))
 
 
+class test_small_subgroup(unittest.TestCase):
+    def __init__(self, *args, **kwargs):
+        unittest.TestCase.__init__(self, *args, **kwargs)
+        self.alpha = fe_sqrt((1+fe_sqrt(1+d))*fe_inv(d))
+
+    def test_alpha(self):
+        self.assertEqual(0, (d*self.alpha**4 - 2 * self.alpha**2-1)%q)
+        y = self.alpha*i
+        x = self.alpha
+        self.assertEqual(0, (y**2-x**2-1-d*x**2*y**2)%q)
+        a = ReferencePoint(x,y,check=False)
+        self.assertTrue((a*2).is_exactly(ReferencePoint(-i,0)))
+        self.assertTrue((a*3).is_exactly(ReferencePoint(
+            self.alpha,-i*self.alpha, check=False)))
+        self.assertTrue((a*4).is_exactly(ReferencePoint(0,-1)))
+        self.assertTrue((a*5).is_exactly(ReferencePoint(
+            -self.alpha, -i*self.alpha, check=False)))
+        self.assertTrue((a*6).is_exactly(ReferencePoint(i, 0)))
+        self.assertTrue((a*7).is_exactly(ReferencePoint(
+            -self.alpha, i*self.alpha, check=False)))
+        self.assertTrue((a*8).is_exactly(ReferencePoint(0,1)))
+        
+
 if __name__ == '__main__':
     unittest.main(verbosity=3)
