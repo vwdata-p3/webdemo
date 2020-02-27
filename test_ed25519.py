@@ -26,6 +26,10 @@ class testReferencePoint(unittest.TestCase):
     def test_order_of_the_baseReferencePoint(self):
         self.assertEqual(ReferencePoint.B*l, ReferencePoint.Zero)
 
+    def test_neg(self):
+        a = ReferencePoint.random()
+        self.assertTrue((a-a).is_exactly(ReferencePoint.Zero))
+
     def test_odd(self):
         self.assertRaises(Odd, lambda: ReferencePoint( 3000226150035073529908023436571072806992287498960698235119705265207080648378, 8665657100173288816593402575771921995144513349282114765923171703131048775885 ))
 
