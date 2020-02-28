@@ -1,6 +1,7 @@
 from ed25519 import *
 import unittest
 import os
+import functools
 
 class testfe(unittest.TestCase):
     def testpack(self):
@@ -17,6 +18,12 @@ class testfe(unittest.TestCase):
         if f!=0:
             self.assertEqual((f*fe_inv(f))%q,1)
         self.assertRaises(DivisionByZero, lambda: fe_inv(0))
+
+    def testfactorization_of_ell_minus_1(self):
+        f = [2, 2, 3, 11, 
+                198211423230930754013084525763697,
+                276602624281642239937218680557139826668747]
+        self.assertEqual(functools.reduce(lambda x,y: x*y, f, 1), l-1)
 
 class testReferencePoint(unittest.TestCase):
     def test_basepoint(self):
