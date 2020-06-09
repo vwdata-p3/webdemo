@@ -18,6 +18,7 @@ class testfe(unittest.TestCase):
         if f!=0:
             self.assertEqual((f*fe_inv(f))%q,1)
         self.assertRaises(DivisionByZero, lambda: fe_inv(0))
+        self.assertEqual(fe_inv(-f),q-fe_inv(f))
 
     def testfactorization_of_ell_minus_1(self):
         f = [2, 2, 3, 11, 
