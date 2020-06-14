@@ -69,6 +69,13 @@ def fe_sqrt_any(f):
         return (pow(2,(q-1)//4,q)*g)%q
     raise NotASquare()
 
+def fe_is_sqrt(f):
+    try:
+        fe_sqrt_any(f)
+    except NotASquare as e:
+        return False
+    return True
+
 def fe_random():
     return random.randint(0,q-1)
 

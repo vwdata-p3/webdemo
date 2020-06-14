@@ -58,6 +58,24 @@ class testReferencePoint(unittest.TestCase):
             a = ReferencePoint.random()
             self.assertEqual(ReferencePoint.unpack(a.pack()),a)
 
+    def test_even_when_sqrt_exists(self):
+        for i in range(10):
+            y = fe_random()
+            x2 = ( (y**2-1)*fe_inv(d*y**2+1) ) % q
+            s2 = ( (1-y)*fe_inv(1+y) )%q
+            try:
+                x = fe_sqrt(x2)
+            except NotASquare as e:
+                continue
+            self.assertEqual(0, (y**2-x**2-1-d*x**2*y**2)%q)
+            odd = False
+            try:
+                ReferencePoint(x,y)
+            except Odd as e:
+                odd = True
+            self.assertEqual(not odd, fe_is_sqrt(s2))
+
+
     def test_zero_neutral(self):
         a = ReferencePoint.random()
         self.assertEqual(a+ReferencePoint.Zero, a)
