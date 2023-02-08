@@ -1,6 +1,6 @@
 cffi==1.13.2
 Click==7.0
-cryptography==3.2
+cryptography==39.0.1
 dnspython==1.16.0
 eventlet==0.31.0
 Flask==1.1.1
