@@ -3,7 +3,7 @@ Click==7.0
 cryptography==3.2
 dnspython==1.16.0
 eventlet==0.31.0
-Flask==1.1.1
+Flask==2.3.2
 Flask-SocketIO==4.2.1
 greenlet==0.4.15
 grpcio==1.26.0
